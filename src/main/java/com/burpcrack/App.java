@@ -11,24 +11,28 @@ import java.util.Scanner;
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
 
+import org.objectweb.asm.*;
+import org.objectweb.asm.tree.*;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+
 public class App {
 
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
-        System.out.println("java -javaagent:burp_crack_1337.jar -jar (pwd_do_burp)");    
-
+        System.out.println("java -javaagent:burp_crack_1337.jar -jar (pwd_do_burp)");
 
         System.out.println("1337 Burp Crack - Console Interface");
 
         System.out.println("Informe o caminho do arquivo Burp Suite JAR (--path):");
         String jarPath = scanner.nextLine();
 
-
         System.out.println("Você já ativou manualmente? (sim/não):");
         String activated = scanner.nextLine().trim().toLowerCase();
 
         if (activated.equals("sim")) {
-            LoaderAgent1337.runWithAgent(jarPath);
+            System.out.println("Comando para iniciar com agente: java -javaagent:burp_crack_1337.jar -jar " + jarPath);
         } else {
             System.out.println("Informe o nome do usuário para gerar a licença:");
             String userName = scanner.nextLine();
@@ -43,10 +47,7 @@ public class App {
             System.out.println("Resposta de Ativação Gerada: " + activationResponse);
 
             System.out.println("Utilize esta resposta para ativar manualmente o Burp Suite.");
-            System.out.println("Pressione Enter para iniciar o Burp Suite...");
-            scanner.nextLine();
-
-            LoaderAgent1337.runWithAgent(jarPath);
+            System.out.println("Comando para iniciar com agente: java -javaagent:burp_crack_1337.jar -jar " + jarPath);
         }
 
         scanner.close();
@@ -163,27 +164,43 @@ class LoaderAgent1337 {
         System.out.println("Loader iniciado, interceptando verificações...");
         inst.addTransformer(new SimpleTransformer());
     }
-
-    public static void runWithAgent(String jarPath) {
-        try {
-            String command = String.format("java -javaagent:%s -jar %s", jarPath, jarPath);
-            Process process = Runtime.getRuntime().exec(command);
-            process.waitFor();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
 }
 
-class SimpleTransformer implements ClassFileTransformer {
+public class SimpleTransformer implements ClassFileTransformer {
 
     @Override
     public byte[] transform(ClassLoader loader, String className, Class<?> classBeingRedefined,
                             ProtectionDomain protectionDomain, byte[] classfileBuffer) {
         if (className != null && className.contains("license")) {
             System.out.println("Interceptando classe: " + className);
+
+            try {
+                ClassReader cr = new ClassReader(new ByteArrayInputStream(classfileBuffer));
+                ClassNode cn = new ClassNode();
+                cr.accept(cn, 0);
+
+                for (MethodNode method : cn.methods) {
+                    if (method.name.equals("validateLicense")) { // NOMEEEEEEEEEE
+                        System.out.println("Patch encontrado no método: " + method.name);
+
+                        InsnList instructions = method.instructions;
+                        instructions.clear();
+
+                        // Inserindo retorno direto (evita validação de licença)
+                        instructions.add(new InsnNode(Opcodes.ICONST_1)); // KKKKK fodase
+                        instructions.add(new InsnNode(Opcodes.IRETURN)); // KKKKKKKKKK lerdao
+                    }
+                }
+
+                ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
+                cn.accept(cw);
+                return cw.toByteArray();
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                System.err.println("Erro ao modificar a classe " + className);
+            }
         }
         return classfileBuffer;
     }
 }
-
