@@ -1,0 +1,3 @@
+Manifest-Version: 1.0
+Main-Class: com.burpcrack.App
+Premain-Class: com.burpcrack.LoaderAgent1337
